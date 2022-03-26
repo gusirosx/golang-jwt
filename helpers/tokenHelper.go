@@ -89,3 +89,27 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) {
 }
 
 //helpers.UpdateAllTOkens(token, refreshToken, foundUser.User_id)
+
+func ValidadeToken(signedToken string) (claims *SignedDetails, msg string) {
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		&SignedDetails{},
+		func(t *jwt.Token) (interface{}, error) {
+			return []byte(SECRET_KEY), nil
+		},
+	)
+	if err != nil {
+		msg = err.Error()
+		return
+	}
+	claims, ok := token.Claims.(*SignedDetails)
+	if !ok {
+		msg = "token is invalid"
+		return
+	}
+
+	if claims.ExpiresAt < time.Now().Local().Unix() {
+		msg = "token is expired"
+	}
+	return
+}
