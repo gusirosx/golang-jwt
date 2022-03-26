@@ -19,7 +19,7 @@ type SignedDetails struct {
 	First_name string
 	Last_name  string
 	Uid        string
-	User_Type  string
+	User_type  string
 	jwt.StandardClaims
 }
 
@@ -33,18 +33,18 @@ func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signed
 		First_name: firstName,
 		Last_name:  lastName,
 		Uid:        uid,
-		User_Type:  userType,
+		User_type:  userType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
 	}
+
 	refreshClaims := &SignedDetails{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Panic(err)
@@ -71,7 +71,15 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) {
 		Upsert: &upsert,
 	}
 
-	_, err := userCollection.UpdateOne(ctx, filter, bson.D{{"$set", updateObj}}, &opt)
+	_, err := userCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{
+			{"$set", updateObj},
+		},
+		&opt,
+	)
+
 	defer cancel()
 	if err != nil {
 		log.Panic(err)

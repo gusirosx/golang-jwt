@@ -59,12 +59,12 @@ func Signup() gin.HandlerFunc {
 		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refresh_token, _ := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_Type, *&user.User_id)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, *&user.User_id)
 		user.Token = &token
-		user.Refresh_Token = &refresh_token
-		resultInsertionNumber, err := userCollection.InsertOne(c, user)
-		if err != nil {
-			msg := fmt.Sprintf("user item was not created")
+		user.Refresh_token = &refreshToken
+		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
+		if insertErr != nil {
+			msg := fmt.Sprintf("User item was not created")
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -100,7 +100,7 @@ func Login() gin.HandlerFunc {
 		if foundUser.Email == nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		}
-		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_Type, *&foundUser.User_id)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, *&foundUser.User_id)
 		helpers.UpdateAllTOkens(token, refreshToken, foundUser.User_id)
 		err = userCollection.FindOne(c, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 		if err != nil {
@@ -131,29 +131,28 @@ func GetUsers() gin.HandlerFunc {
 		}
 
 		startIndex := (page - 1) * recordPerPage
-		startIndex, err = strconv.Atoi(ctx.Query("startIndex"))
+		startIndex, _ = strconv.Atoi(ctx.Query("startIndex"))
 
-		matchStage := bson.D{"$match", bson.D{{{}}}}
-		groupStage := bson.D{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"push", "$$ROOT"}}}}}}
-
+		matchStage := bson.D{{"$match", bson.D{{}}}}
+		groupStage := bson.D{{"$group", bson.D{
+			{"_id", bson.D{{"_id", "null"}}},
+			{"total_count", bson.D{{"$sum", 1}}},
+			{"data", bson.D{{"$push", "$$ROOT"}}}}}}
 		projectStage := bson.D{
 			{"$project", bson.D{
-				{"id", 0},
+				{"_id", 0},
 				{"total_count", 1},
-				{"user_items", bson.D{{"$slice", []interface{}{"data", startIndex}}}},
-			}},
-		}
-
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, projectStage})
+				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}}}}}
+		result, err := userCollection.Aggregate(c, mongo.Pipeline{matchStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
 		}
-		var allUsers []bson.M
-		if err = result.All(ctx, &allUsers); err != nil {
+		var allusers []bson.M
+		if err = result.All(ctx, &allusers); err != nil {
 			log.Fatal(err)
 		}
-		ctx.JSON(http.StatusOK, allUsers[0])
+		ctx.JSON(http.StatusOK, allusers[0])
 	}
 }
 
@@ -189,7 +188,7 @@ func VerifyPassword(userPass, providedPass string) (bool, string) {
 	check := true
 	msg := ""
 	if err != nil {
-		msg = fmt.Sprintf("email of password is incorrect")
+		msg = "email of password is incorrect"
 		check = false
 	}
 	return check, msg

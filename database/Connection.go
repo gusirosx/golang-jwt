@@ -25,7 +25,6 @@ func DBinstance() *mongo.Client {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	if err := client.Connect(ctx); err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -34,6 +33,6 @@ func DBinstance() *mongo.Client {
 }
 
 func OpenCollection(client *mongo.Client, name string) *mongo.Collection {
-	var collection *mongo.Collection = *mongo.Database("cluster0").Collection(name)
+	var collection *mongo.Collection = client.Database("cluster0").Collection(name)
 	return collection
 }
