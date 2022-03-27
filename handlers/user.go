@@ -1,5 +1,5 @@
 package handlers
 
-func Signup() {
+// func Signup() {
 
-}
+// }
