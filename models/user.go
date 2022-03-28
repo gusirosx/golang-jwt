@@ -23,7 +23,7 @@ var validate = validator.New()
 
 func Signup() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		var user entity.User
 		defer cancel()
 		if err := ctx.BindJSON(&user); err != nil {
@@ -36,7 +36,7 @@ func Signup() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 			return
 		}
-		count, err := userCollection.CountDocuments(c, bson.M{"email": user.Email})
+		count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
 		if err != nil {
 			log.Panic(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
@@ -45,7 +45,7 @@ func Signup() gin.HandlerFunc {
 		password := HashPassword(*user.Password)
 		user.Password = &password
 
-		count, err = userCollection.CountDocuments(c, bson.M{"phone": user.Phone})
+		count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
 		if err != nil {
 			log.Panic(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone"})
@@ -103,7 +103,6 @@ func Login() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		ctx.JSON(http.StatusOK, foundUser)
-
 	}
 }
 
@@ -115,7 +114,7 @@ func GetUsers() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
 		recordPerPage, err := strconv.Atoi(ctx.Query("recordPerPage"))
@@ -140,7 +139,7 @@ func GetUsers() gin.HandlerFunc {
 				{"_id", 0},
 				{"total_count", 1},
 				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}}}}}
-		result, err := userCollection.Aggregate(c, mongo.Pipeline{matchStage, groupStage, projectStage})
+		result, err := userCollection.Aggregate(queryCtx, mongo.Pipeline{matchStage, groupStage, projectStage})
 
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
@@ -161,10 +160,10 @@ func GetUser() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 		var user entity.User
-		if err := userCollection.FindOne(c, bson.M{"user_id": userID}).Decode(&user); err != nil {
+		if err := userCollection.FindOne(queryCtx, bson.M{"user_id": userID}).Decode(&user); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
