@@ -57,7 +57,7 @@ func AuthRoutes(routes *gin.RouterGroup) {
 func UserRoutes(routes *gin.RouterGroup) {
 	routes.Use(middleware.Authenticate())
 	// Handle GET users requests at /users
-	routes.GET("", handlers.GetUsers())
+	routes.GET("", handlers.GetUsers)
 	// Handle GET user requests at /users/ID
-	routes.GET("/:user_id", models.GetUser())
+	routes.GET("/:user_id", handlers.GetUser)
 }

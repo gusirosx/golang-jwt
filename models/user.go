@@ -134,21 +134,11 @@ func GetUsers(ctx *gin.Context) (response *mongo.Cursor, err error) {
 	return
 }
 
-func GetUser() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		userID := ctx.Param("user_id")
-
-		if err := MatchUserTypeToUid(ctx, userID); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel()
-		var user entity.User
-		if err := userCollection.FindOne(queryCtx, bson.M{"user_id": userID}).Decode(&user); err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ctx.JSON(http.StatusOK, user)
+func GetUser(UID string) (user entity.User, err error) {
+	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+	if err = userCollection.FindOne(queryCtx, bson.M{"user_id": UID}).Decode(&user); err != nil {
+		return
 	}
+	return
 }
