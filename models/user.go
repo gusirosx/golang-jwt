@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"fmt"
 	"golang-jwt/database"
 	"golang-jwt/entity"
 	"golang-jwt/helpers"
@@ -59,39 +58,35 @@ func Signup() gin.HandlerFunc {
 		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, *&user.User_id)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
 		if insertErr != nil {
-			msg := fmt.Sprintf("User item was not created")
+			msg := "user item was not created"
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
-		defer cancel()
 		ctx.JSON(http.StatusOK, resultInsertionNumber)
 	}
 }
 
 func Login() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		var user entity.User
-		var foundUser entity.User
+		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second) //query ctx
+		defer cancel()
+		var user, foundUser entity.User
 		if err := ctx.BindJSON(&user); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		err := userCollection.FindOne(c, bson.M{"email": user.Email}).Decode(&foundUser)
-		defer cancel()
+		err := userCollection.FindOne(queryCtx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"email": "email or password is incorrect"})
 			return
 		}
 		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
-		defer cancel()
-		//!!Pesquisar sobre o defer cancel() debaixo de cada if
 		if !passwordIsValid {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
@@ -100,9 +95,10 @@ func Login() gin.HandlerFunc {
 		if foundUser.Email == nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		}
-		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, *&foundUser.User_id)
+
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, foundUser.User_id)
 		helpers.UpdateAllTOkens(token, refreshToken, foundUser.User_id)
-		err = userCollection.FindOne(c, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
+		err = userCollection.FindOne(queryCtx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
@@ -120,6 +116,7 @@ func GetUsers() gin.HandlerFunc {
 			return
 		}
 		var c, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		recordPerPage, err := strconv.Atoi(ctx.Query("recordPerPage"))
 		if err != nil || recordPerPage < 1 {
@@ -144,7 +141,7 @@ func GetUsers() gin.HandlerFunc {
 				{"total_count", 1},
 				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}}}}}
 		result, err := userCollection.Aggregate(c, mongo.Pipeline{matchStage, groupStage, projectStage})
-		defer cancel()
+
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
 		}
