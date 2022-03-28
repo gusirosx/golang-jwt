@@ -41,16 +41,19 @@ func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signed
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
-		log.Panic(err)
+		log.Println(err.Error())
 		return
 	}
-
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
 	return token, refreshToken, err
 }
 
-func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) {
+func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	var updateObj primitive.D
@@ -67,15 +70,13 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) {
 		Upsert: &upsert,
 	}
 	update := bson.D{{Key: "$set", Value: updateObj}}
-	_, err := userCollection.UpdateOne(ctx, filter, update, &opt)
+	_, err = userCollection.UpdateOne(ctx, filter, update, &opt)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err.Error())
 		return
 	}
 	return
 }
-
-//helpers.UpdateAllTOkens(token, refreshToken, foundUser.User_id)
 
 func ValidadeToken(signedToken string) (claims *SignedDetails, msg string) {
 	token, err := jwt.ParseWithClaims(
