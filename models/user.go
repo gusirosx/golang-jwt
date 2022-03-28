@@ -4,7 +4,6 @@ import (
 	"context"
 	"golang-jwt/database"
 	"golang-jwt/entity"
-	"golang-jwt/helpers"
 	"log"
 	"net/http"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
@@ -58,7 +56,7 @@ func Signup() gin.HandlerFunc {
 		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+		token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
@@ -96,8 +94,8 @@ func Login() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		}
 
-		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, foundUser.User_id)
-		helpers.UpdateAllTOkens(token, refreshToken, foundUser.User_id)
+		token, refreshToken, _ := GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, foundUser.User_id)
+		UpdateAllTOkens(token, refreshToken, foundUser.User_id)
 		err = userCollection.FindOne(queryCtx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -113,14 +111,7 @@ func GetUsers(ctx *gin.Context) (response *mongo.Cursor, err error) {
 		recordPerPage = 10
 	}
 
-	// page, err1 := strconv.Atoi(ctx.Query("page"))
-	// if err1 != nil || page < 1 {
-	// 	page = 1
-	// }
-
-	// startIndex := (page - 1) * recordPerPage
 	startIndex, _ := strconv.Atoi(ctx.Query("startIndex"))
-
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{}}}}
 	groupStage := bson.D{{Key: "$group", Value: bson.D{
 		{Key: "_id", Value: bson.D{{Key: "_id", Value: "null"}}},
@@ -147,7 +138,7 @@ func GetUser() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userID := ctx.Param("user_id")
 
-		if err := helpers.MatchUserTypeToUid(ctx, userID); err != nil {
+		if err := MatchUserTypeToUid(ctx, userID); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -160,23 +151,4 @@ func GetUser() gin.HandlerFunc {
 		}
 		ctx.JSON(http.StatusOK, user)
 	}
-}
-
-func HashPassword(password string) string {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	if err != nil {
-		log.Panic(err)
-	}
-	return string(bytes)
-}
-
-func VerifyPassword(userPass, providedPass string) (bool, string) {
-	err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(userPass))
-	check := true
-	msg := ""
-	if err != nil {
-		msg = "email of password is incorrect"
-		check = false
-	}
-	return check, msg
 }

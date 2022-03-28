@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"golang-jwt/helpers"
+	"golang-jwt/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +15,7 @@ func Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := helpers.ValidadeToken(clientToken)
+		claims, err := models.ValidadeToken(clientToken)
 		if err != "" {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return

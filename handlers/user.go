@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"golang-jwt/helpers"
 	"golang-jwt/models"
 	"log"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 
 func GetUsers() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if err := helpers.CheckUserType(ctx, "ADMIN"); err != nil {
+		if err := models.CheckUserType(ctx, "ADMIN"); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
