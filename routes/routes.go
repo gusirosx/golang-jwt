@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"golang-jwt/handlers"
 	"golang-jwt/middleware"
 	"golang-jwt/models"
 	"log"
@@ -56,7 +57,7 @@ func AuthRoutes(routes *gin.RouterGroup) {
 func UserRoutes(routes *gin.RouterGroup) {
 	routes.Use(middleware.Authenticate())
 	// Handle GET users requests at /users
-	routes.GET("", models.GetUsers())
+	routes.GET("", handlers.GetUsers())
 	// Handle GET user requests at /users/ID
 	routes.GET("/:user_id", models.GetUser())
 }
