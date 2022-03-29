@@ -37,27 +37,34 @@ func Signup() gin.HandlerFunc {
 		}
 		count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
 		if err != nil {
-			log.Panic(err)
+			log.Println(err.Error())
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
+			return
+		} else if count > 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "this email has already been registered"})
+			return
+		}
+
+		count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
+		if err != nil {
+			log.Println(err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone"})
+			return
+		} else if count > 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "this phone has already been registered"})
+			return
 		}
 
 		password := HashPassword(*user.Password)
 		user.Password = &password
+		time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
 
-		count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
-		if err != nil {
-			log.Panic(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone"})
-		}
-
-		if count > 0 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "this email or phone number already exists"})
-		}
-		user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		user.Created_at = time
+		user.Updated_at = time
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
@@ -70,8 +77,31 @@ func Signup() gin.HandlerFunc {
 	}
 }
 
-// verificar se a chave secreta está sendo utilizada em algum lugar
+// type User struct {
+// 	ID            primitive.ObjectID `bson:"_id"`
+// 	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
+// 	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
+// 	Password      *string            `json:"Password" validate:"required,min=6"`
+// 	Email         *string            `json:"email" validate:"email,required"`
+// 	Phone         *string            `json:"phone" validate:"required"`
+// 	Token         *string            `json:"token"`
+// 	User_type     *string            `json:"user_type" validate:"required,eq=ADMIN|eq=USER"`
+// 	Refresh_token *string            `json:"refresh_token"`
+// 	Created_at    time.Time          `json:"created_at"`
+// 	Updated_at    time.Time          `json:"updated_at"`
+// 	User_id       string             `json:"user_id"`
+// }
 
+// {
+// 	"First_name": "Gustavo",
+// 	"Last_name": "Rodrigues",
+// 	"Password": "123456",
+// 	"Email":"gsr3@test.com",
+// 	"Phone":"+5534900000002",
+// 	"User_type":"ADMIN"
+// }
+
+// verificar se a chave secreta está sendo utilizada em algum lugar
 func Login(email, password *string) (entity.User, error) {
 
 	var user entity.User // Found User
