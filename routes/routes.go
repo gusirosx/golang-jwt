@@ -51,7 +51,7 @@ func AuthRoutes(routes *gin.RouterGroup) {
 	// Handle signup requests at /users/signup
 	routes.POST("/signup", models.Signup())
 	// Handle login requests at /users/login
-	routes.POST("/login", models.Login())
+	routes.POST("/login", handlers.Login)
 }
 
 func UserRoutes(routes *gin.RouterGroup) {

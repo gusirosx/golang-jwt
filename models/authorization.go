@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -38,13 +39,19 @@ func HashPassword(password string) string {
 	return string(bytes)
 }
 
-func VerifyPassword(userPass, providedPass string) (bool, string) {
+func VerifyPassword(userPass, providedPass string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(userPass))
-	check := true
-	msg := ""
 	if err != nil {
-		msg = "email of password is incorrect"
-		check = false
+		err = fmt.Errorf("user password is incorrect")
+		return false, err
 	}
-	return check, msg
+	return true, nil
 }
+
+// func VerifyPassword(userPass, providedPass string) (bool, string) {
+// 	err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(userPass))
+// 	if err != nil {
+// 		return false, "user password is incorrect"
+// 	}
+// 	return true, ""
+// }

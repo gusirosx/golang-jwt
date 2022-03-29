@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"golang-jwt/database"
 	"golang-jwt/entity"
 	"log"
@@ -69,42 +70,40 @@ func Signup() gin.HandlerFunc {
 	}
 }
 
-func Login() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second) //query ctx
-		defer cancel()
-		var user, foundUser entity.User
-		if err := ctx.BindJSON(&user); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+// verificar se a chave secreta está sendo utilizada em algum lugar
 
-		err := userCollection.FindOne(queryCtx, bson.M{"email": user.Email}).Decode(&foundUser)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"email": "email or password is incorrect"})
-			return
-		}
-		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
-		if !passwordIsValid {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			return
-		}
+func Login(email, password *string) (entity.User, error) {
 
-		if foundUser.Email == nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
-		}
+	var user entity.User // Found User
+	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 
-		token, refreshToken, _ := GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, foundUser.User_id)
-		UpdateAllTOkens(token, refreshToken, foundUser.User_id)
-		err = userCollection.FindOne(queryCtx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		ctx.JSON(http.StatusOK, foundUser)
+	err := userCollection.FindOne(queryCtx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return entity.User{}, fmt.Errorf("email is incorrect")
 	}
+	passwordIsValid, err := VerifyPassword(*password, *user.Password)
+	if !passwordIsValid {
+		return entity.User{}, err
+	}
+	if user.Email == nil {
+		return entity.User{}, fmt.Errorf("user not found")
+	}
+
+	token, refreshToken, err := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+	if err != nil {
+		return entity.User{}, fmt.Errorf("unable to generate the user token's")
+	}
+	if err := UpdateAllTOkens(token, refreshToken, user.User_id); err != nil {
+		return entity.User{}, fmt.Errorf("unable to update the user token")
+	}
+	err = userCollection.FindOne(queryCtx, bson.M{"user_id": user.User_id}).Decode(&user)
+	if err != nil {
+		return entity.User{}, err
+	}
+	return user, nil
 }
 
-// verificar se a chave secreta está sendo utilizada em algum lugar
 func GetUsers(ctx *gin.Context) (response *mongo.Cursor, err error) {
 	recordPerPage, err := strconv.Atoi(ctx.Query("recordPerPage"))
 	if err != nil || recordPerPage < 1 {
