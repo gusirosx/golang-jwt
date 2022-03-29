@@ -3,7 +3,6 @@ package routes
 import (
 	"golang-jwt/handlers"
 	"golang-jwt/middleware"
-	"golang-jwt/models"
 	"log"
 	"net/http"
 
@@ -49,7 +48,7 @@ func initializeRoutes(router *gin.Engine) {
 
 func AuthRoutes(routes *gin.RouterGroup) {
 	// Handle signup requests at /users/signup
-	routes.POST("/signup", models.Signup())
+	routes.POST("/signup", handlers.Signup)
 	// Handle login requests at /users/login
 	routes.POST("/login", handlers.Login)
 }

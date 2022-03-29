@@ -7,8 +7,32 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+var validate = validator.New()
+
+func Signup(ctx *gin.Context) {
+	var user entity.User
+
+	if err := ctx.BindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	validationErr := validate.Struct(user)
+	if validationErr != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		return
+	}
+
+	if err := models.Signup(user); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"success": "User was successfully created"})
+}
 
 func Login(ctx *gin.Context) {
 	var user entity.User

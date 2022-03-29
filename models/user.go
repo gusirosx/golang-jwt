@@ -6,100 +6,62 @@ import (
 	"golang-jwt/database"
 	"golang-jwt/entity"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
-var validate = validator.New()
 
-func Signup() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		var user entity.User
-		defer cancel()
-		if err := ctx.BindJSON(&user); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+func Signup(user entity.User) error {
+	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 
-		validationErr := validate.Struct(user)
-		if validationErr != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
-			return
-		}
-		count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
-		if err != nil {
-			log.Println(err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
-			return
-		} else if count > 0 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "this email has already been registered"})
-			return
-		}
-
-		count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
-		if err != nil {
-			log.Println(err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone"})
-			return
-		} else if count > 0 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "this phone has already been registered"})
-			return
-		}
-
-		password := HashPassword(*user.Password)
-		user.Password = &password
-		time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
-
-		user.Created_at = time
-		user.Updated_at = time
-		user.ID = primitive.NewObjectID()
-		user.User_id = user.ID.Hex()
-
-		user.Token = &token
-		user.Refresh_token = &refreshToken
-		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
-		if insertErr != nil {
-			msg := "user item was not created"
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			return
-		}
-		ctx.JSON(http.StatusOK, resultInsertionNumber)
+	count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("error occured while checking for the email")
+	} else if count > 0 {
+		return fmt.Errorf("this email has already been registered")
 	}
+	count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("error occured while checking for the phone")
+	} else if count > 0 {
+		return fmt.Errorf("this phone has already been registered")
+	}
+
+	password := HashPassword(*user.Password)
+	time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+	id := primitive.NewObjectID()
+	newuser := entity.User{
+		ID:            id,
+		First_name:    user.First_name,
+		Last_name:     user.Last_name,
+		Password:      &password,
+		Email:         user.Email,
+		Phone:         user.Phone,
+		Token:         &token,
+		Refresh_token: &refreshToken,
+		User_type:     user.User_type,
+		Created_at:    time,
+		Updated_at:    time,
+		User_id:       id.Hex(),
+	}
+
+	_, err = userCollection.InsertOne(queryCtx, newuser)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("unable to create user")
+	}
+	return nil
 }
-
-// type User struct {
-// 	ID            primitive.ObjectID `bson:"_id"`
-// 	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
-// 	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
-// 	Password      *string            `json:"Password" validate:"required,min=6"`
-// 	Email         *string            `json:"email" validate:"email,required"`
-// 	Phone         *string            `json:"phone" validate:"required"`
-// 	Token         *string            `json:"token"`
-// 	User_type     *string            `json:"user_type" validate:"required,eq=ADMIN|eq=USER"`
-// 	Refresh_token *string            `json:"refresh_token"`
-// 	Created_at    time.Time          `json:"created_at"`
-// 	Updated_at    time.Time          `json:"updated_at"`
-// 	User_id       string             `json:"user_id"`
-// }
-
-// {
-// 	"First_name": "Gustavo",
-// 	"Last_name": "Rodrigues",
-// 	"Password": "123456",
-// 	"Email":"gsr3@test.com",
-// 	"Phone":"+5534900000002",
-// 	"User_type":"ADMIN"
-// }
 
 // verificar se a chave secreta está sendo utilizada em algum lugar
 func Login(email, password *string) (entity.User, error) {
