@@ -56,21 +56,16 @@ func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signed
 func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
-	var updateObj primitive.D
-
-	updateObj = append(updateObj, bson.E{Key: "token", Value: signedToken})
-	updateObj = append(updateObj, bson.E{Key: "refresh_token", Value: signedRefreshToken})
+	var updateToken primitive.D
 
 	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	updateObj = append(updateObj, bson.E{Key: "updated_at", Value: Updated_at})
-
-	upsert := true
-	filter := bson.M{"user_id": userId}
-	opt := options.UpdateOptions{
-		Upsert: &upsert,
-	}
-	update := bson.D{{Key: "$set", Value: updateObj}}
-	_, err = userCollection.UpdateOne(ctx, filter, update, &opt)
+	updateToken = append(updateToken,
+		bson.E{Key: "token", Value: signedToken},
+		bson.E{Key: "refresh_token", Value: signedRefreshToken},
+		bson.E{Key: "updated_at", Value: Updated_at})
+	opt := options.Update().SetUpsert(true)
+	update := bson.D{{Key: "$set", Value: updateToken}}
+	_, err = userCollection.UpdateByID(ctx, userId, update, opt)
 	if err != nil {
 		log.Println(err.Error())
 		return

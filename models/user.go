@@ -7,6 +7,7 @@ import (
 	"golang-jwt/entity"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,17 +20,19 @@ import (
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
 
 func CreateUser(user entity.User) error {
-	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
-	if err != nil {
-		log.Println(err.Error())
-		return fmt.Errorf("error occured while checking for the email")
-	} else if count > 0 {
-		return fmt.Errorf("this email has already been registered")
+	// e-mail check
+	if err := emailVerify(ctx, *user.Email); err != nil {
+		return err
 	}
-	count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
+	// phone check
+	if err := phoneVerify(ctx, *user.Phone); err != nil {
+		return err
+	}
+
+	count, err := userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("error occured while checking for the phone")
@@ -56,7 +59,7 @@ func CreateUser(user entity.User) error {
 		User_id:       id.Hex(),
 	}
 
-	_, err = userCollection.InsertOne(queryCtx, newuser)
+	_, err = userCollection.InsertOne(ctx, newuser)
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("unable to create user")
@@ -67,6 +70,8 @@ func CreateUser(user entity.User) error {
 
 func UpdateUser(id string, user entity.User) error {
 
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 	// Declare a primitive ObjectID from a hexadecimal string
 	idPrimitive, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -74,23 +79,23 @@ func UpdateUser(id string, user entity.User) error {
 		return err
 	}
 
-	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
-
-	// count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	return fmt.Errorf("error occured while checking for the email")
-	// } else if count > 0 {
-	// 	return fmt.Errorf("this email has already been registered")
-	// }
-	// count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	return fmt.Errorf("error occured while checking for the phone")
-	// } else if count > 0 {
-	// 	return fmt.Errorf("this phone has already been registered")
-	// }
+	recU, err := GetUser(id)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("error during user recovering")
+	}
+	// e-mail check
+	if !strings.EqualFold(*user.Email, *recU.Email) {
+		if err := emailVerify(ctx, *user.Email); err != nil {
+			return err
+		}
+	}
+	// phone check
+	if !strings.EqualFold(*user.Phone, *recU.Phone) {
+		if err := phoneVerify(ctx, *user.Phone); err != nil {
+			return err
+		}
+	}
 
 	var updatedUser primitive.D
 	password := HashPassword(*user.Password)
@@ -106,17 +111,12 @@ func UpdateUser(id string, user entity.User) error {
 		bson.E{Key: "updated_at", Value: time})
 	opt := options.Update().SetUpsert(true)
 	update := bson.D{{Key: "$set", Value: updatedUser}}
-	_, err = userCollection.UpdateByID(queryCtx, idPrimitive, update, opt)
+	_, err = userCollection.UpdateByID(ctx, idPrimitive, update, opt)
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("unable to update user")
 	}
 
-	recU, err := GetUser(id)
-	if err != nil {
-		log.Println(err.Error())
-		return fmt.Errorf("error during user recovering")
-	}
 	if err := UpdateAllTOkens(*recU.Token, *recU.Refresh_token, recU.User_id); err != nil {
 		return fmt.Errorf("unable to update the user token")
 	}
@@ -216,8 +216,7 @@ func GetUser(UID string) (user entity.User, err error) {
 	return
 }
 
-// Handle PUT requests at /users
-// Handle DELETE requests at /users
-// CreateUser
-// UpdateUser
-// DeleteUser
+// CreateClaims
+// ReadClaims
+// UpdateClaims
+// DeleteClaims
