@@ -49,6 +49,7 @@ func initializeRoutes(router *gin.Engine) {
 func AuthRoutes(routes *gin.RouterGroup) {
 	// Handle signup requests at /users/signup
 	routes.POST("/signup", handlers.Signup)
+	routes.PUT("/:user_id", handlers.UpdateUser)
 	// Handle login requests at /users/login
 	routes.POST("/login", handlers.Login)
 }

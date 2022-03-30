@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
@@ -64,6 +65,65 @@ func CreateUser(user entity.User) error {
 	return nil
 }
 
+func UpdateUser(id string, user entity.User) error {
+
+	// Declare a primitive ObjectID from a hexadecimal string
+	idPrimitive, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	// count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return fmt.Errorf("error occured while checking for the email")
+	// } else if count > 0 {
+	// 	return fmt.Errorf("this email has already been registered")
+	// }
+	// count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return fmt.Errorf("error occured while checking for the phone")
+	// } else if count > 0 {
+	// 	return fmt.Errorf("this phone has already been registered")
+	// }
+
+	var updatedUser primitive.D
+	password := HashPassword(*user.Password)
+	time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+	updatedUser = append(updatedUser,
+		bson.E{Key: "first_name", Value: user.First_name},
+		bson.E{Key: "last_name", Value: user.Last_name},
+		bson.E{Key: "password", Value: &password},
+		bson.E{Key: "email", Value: user.Email},
+		bson.E{Key: "phone", Value: user.Phone},
+		bson.E{Key: "user_type", Value: user.User_type},
+		bson.E{Key: "updated_at", Value: time})
+	opt := options.Update().SetUpsert(true)
+	update := bson.D{{Key: "$set", Value: updatedUser}}
+	_, err = userCollection.UpdateByID(queryCtx, idPrimitive, update, opt)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("unable to update user")
+	}
+
+	recU, err := GetUser(id)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("error during user recovering")
+	}
+	if err := UpdateAllTOkens(*recU.Token, *recU.Refresh_token, recU.User_id); err != nil {
+		return fmt.Errorf("unable to update the user token")
+	}
+
+	return nil
+}
+
 func DeleteUser(id string) error {
 	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
@@ -77,7 +137,6 @@ func DeleteUser(id string) error {
 
 	// Call the DeleteOne() method by passing BSON
 	res, err := userCollection.DeleteOne(queryCtx, bson.M{"_id": idPrimitive})
-
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("unable to delete user")
