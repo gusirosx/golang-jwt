@@ -27,11 +27,26 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 
-	if err := models.Signup(user); err != nil {
+	if err := models.CreateUser(user); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"success": "User was successfully created"})
+}
+
+func DeleteUser(ctx *gin.Context) {
+
+	userID := ctx.Param("user_id")
+	if userID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "no user ID was provided"})
+		return
+	}
+
+	if err := models.DeleteUser(userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"success": "User was successfully deleted"})
 }
 
 func Login(ctx *gin.Context) {

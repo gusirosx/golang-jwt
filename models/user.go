@@ -17,7 +17,7 @@ import (
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
 
-func Signup(user entity.User) error {
+func CreateUser(user entity.User) error {
 	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
@@ -60,10 +60,33 @@ func Signup(user entity.User) error {
 		log.Println(err.Error())
 		return fmt.Errorf("unable to create user")
 	}
+
 	return nil
 }
 
-// verificar se a chave secreta está sendo utilizada em algum lugar
+func DeleteUser(id string) error {
+	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	// Declare a primitive ObjectID from a hexadecimal string
+	idPrimitive, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	// Call the DeleteOne() method by passing BSON
+	res, err := userCollection.DeleteOne(queryCtx, bson.M{"_id": idPrimitive})
+
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("unable to delete user")
+	} else if res.DeletedCount == 0 {
+		return fmt.Errorf("there is no such user for be deleted")
+	}
+	return nil
+}
+
 func Login(email, password *string) (entity.User, error) {
 
 	var user entity.User // Found User
@@ -133,3 +156,9 @@ func GetUser(UID string) (user entity.User, err error) {
 	}
 	return
 }
+
+// Handle PUT requests at /users
+// Handle DELETE requests at /users
+// CreateUser
+// UpdateUser
+// DeleteUser

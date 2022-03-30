@@ -57,6 +57,7 @@ func UserRoutes(routes *gin.RouterGroup) {
 	routes.Use(middleware.Authenticate())
 	// Handle GET users requests at /users
 	routes.GET("", handlers.GetUsers)
+	routes.DELETE("/:user_id", handlers.DeleteUser)
 	// Handle GET user requests at /users/ID
 	routes.GET("/:user_id", handlers.GetUser)
 }
