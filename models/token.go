@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"golang-jwt/entity"
 	"log"
 	"os"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type SignedDetails struct {
+type SignedDetails2 struct {
 	Email      string
 	First_name string
 	Last_name  string
@@ -23,21 +24,26 @@ type SignedDetails struct {
 
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
+//var SecretKey []byte = []byte(os.Getenv("JWT_SECRET_KEY"))
+
 func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signedToken string, signedRefreshToken string, err error) {
-	claims := &SignedDetails{
-		Email:      email,
-		First_name: firstName,
-		Last_name:  lastName,
-		Uid:        uid,
-		User_type:  userType,
+	claims := &entity.SignedDetails{
+		UID:       uid,
+		UserName:  "",
+		FirstName: firstName,
+		LastName:  lastName,
+		Email:     email,
+		Phone:     "",
+		UserType:  userType,
+		Picture:   "",
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
 	}
 
-	refreshClaims := &SignedDetails{
+	refreshClaims := &entity.SignedDetails{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * 1).Unix(),
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
@@ -58,14 +64,15 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error)
 	defer cancel()
 	var updateToken primitive.D
 
-	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	UpdatedAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateToken = append(updateToken,
 		bson.E{Key: "token", Value: signedToken},
 		bson.E{Key: "refresh_token", Value: signedRefreshToken},
-		bson.E{Key: "updated_at", Value: Updated_at})
+		bson.E{Key: "updated_at", Value: UpdatedAt})
 	opt := options.Update().SetUpsert(true)
+	filter := bson.M{"user_id": userId}
 	update := bson.D{{Key: "$set", Value: updateToken}}
-	_, err = userCollection.UpdateByID(ctx, userId, update, opt)
+	_, err = userCollection.UpdateOne(ctx, filter, update, opt)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -73,10 +80,10 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error)
 	return
 }
 
-func ValidadeToken(signedToken string) (claims *SignedDetails, msg string) {
+func ValidadeToken(signedToken string) (claims *entity.SignedDetails, msg string) {
 	token, err := jwt.ParseWithClaims(
 		signedToken,
-		&SignedDetails{},
+		&entity.SignedDetails{},
 		func(t *jwt.Token) (interface{}, error) {
 			return []byte(SECRET_KEY), nil
 		},
@@ -85,7 +92,7 @@ func ValidadeToken(signedToken string) (claims *SignedDetails, msg string) {
 		msg = err.Error()
 		return
 	}
-	claims, ok := token.Claims.(*SignedDetails)
+	claims, ok := token.Claims.(*entity.SignedDetails)
 	if !ok {
 		msg = "token is invalid"
 		return

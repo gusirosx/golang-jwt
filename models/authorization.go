@@ -47,11 +47,3 @@ func VerifyPassword(userPass, providedPass string) (bool, error) {
 	}
 	return true, nil
 }
-
-// func VerifyPassword(userPass, providedPass string) (bool, string) {
-// 	err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(userPass))
-// 	if err != nil {
-// 		return false, "user password is incorrect"
-// 	}
-// 	return true, ""
-// }

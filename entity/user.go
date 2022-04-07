@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -20,3 +21,20 @@ type User struct {
 	Updated_at    time.Time          `json:"updated_at"`
 	User_id       string             `json:"user_id"`
 }
+
+type SignedDetails struct {
+	UID       string `json:"user_id"`
+	UserName  string `json:"username"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	UserType  string `json:"role"`
+	Picture   string `json:"picture"`
+	jwt.StandardClaims
+}
+
+// 	 "permissions": {
+// 	  "group_permissions": null,
+// 	  "user_permissions": []
+// 	},

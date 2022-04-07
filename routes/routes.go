@@ -49,16 +49,18 @@ func initializeRoutes(router *gin.Engine) {
 func AuthRoutes(routes *gin.RouterGroup) {
 	// Handle signup requests at /users/signup
 	routes.POST("/signup", handlers.Signup)
-	routes.PUT("/:user_id", handlers.UpdateUser)
 	// Handle login requests at /users/login
 	routes.POST("/login", handlers.Login)
 }
 
 func UserRoutes(routes *gin.RouterGroup) {
 	routes.Use(middleware.Authenticate())
-	// Handle GET users requests at /users
+	// Read users at /users
 	routes.GET("", handlers.GetUsers)
+	// Update users at /users
+	routes.PUT("/:user_id", handlers.UpdateUser)
+	// Delete users at /users
 	routes.DELETE("/:user_id", handlers.DeleteUser)
-	// Handle GET user requests at /users/ID
+	// Read users at /users/ID
 	routes.GET("/:user_id", handlers.GetUser)
 }

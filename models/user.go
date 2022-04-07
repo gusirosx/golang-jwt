@@ -168,6 +168,7 @@ func Login(email, password *string) (entity.User, error) {
 	if err != nil {
 		return entity.User{}, fmt.Errorf("unable to generate the user token's")
 	}
+	log.Println(token)
 	if err := UpdateAllTOkens(token, refreshToken, user.User_id); err != nil {
 		return entity.User{}, fmt.Errorf("unable to update the user token")
 	}
