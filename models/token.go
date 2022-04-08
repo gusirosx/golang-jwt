@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"golang-jwt/entity"
 	"log"
 	"os"
@@ -17,33 +18,9 @@ var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
 //var SecretKey []byte = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-//func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signedToken string, signedRefreshToken string, err error) {
-
 func GenerateAllTokens(user entity.User) (string, string, error) {
-	claims := &entity.SignedDetails{
-		UID:       user.UID,
-		UserName:  *user.UserName,
-		FirstName: *user.FirstName,
-		LastName:  *user.LastName,
-		Email:     *user.Email,
-		Phone:     *user.Phone,
-		UserType:  *user.UserType,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
-		},
-	}
-	refreshClaims := &entity.SignedDetails{
-		UID:       user.UID,
-		UserName:  *user.UserName,
-		FirstName: *user.FirstName,
-		LastName:  *user.LastName,
-		Email:     *user.Email,
-		Phone:     *user.Phone,
-		UserType:  *user.UserType,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(365)).Unix(),
-		},
-	}
+	claims := claimsMount(user, time.Now().Local().Add(time.Hour*1).Unix())
+	refreshClaims := claimsMount(user, time.Now().Local().Add(time.Hour*time.Duration(365)).Unix())
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Println(err.Error())
@@ -57,25 +34,44 @@ func GenerateAllTokens(user entity.User) (string, string, error) {
 	return token, refreshToken, nil
 }
 
-func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error) {
+func claimsMount(user entity.User, expTime int64) *entity.SignedDetails {
+	return &entity.SignedDetails{
+		UID:       user.UID,
+		UserName:  *user.UserName,
+		FirstName: *user.FirstName,
+		LastName:  *user.LastName,
+		Email:     *user.Email,
+		Phone:     *user.Phone,
+		UserType:  *user.UserType,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expTime,
+		},
+	}
+}
+
+func UpdateAllTOkens(user entity.User) error {
+	// Generate new token's
+	token, refreshToken, err := GenerateAllTokens(user)
+	if err != nil {
+		return fmt.Errorf("unable to generate the user token's")
+	}
+	// Update user info with the new token's
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	var updateToken primitive.D
-
 	UpdatedAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateToken = append(updateToken,
-		bson.E{Key: "token", Value: signedToken},
-		bson.E{Key: "refreshToken", Value: signedRefreshToken},
+		bson.E{Key: "token", Value: token},
+		bson.E{Key: "refreshtoken", Value: refreshToken},
 		bson.E{Key: "updated", Value: UpdatedAt})
 	opt := options.Update().SetUpsert(true)
-	filter := bson.M{"uid": userId}
+	filter := bson.M{"uid": user.UID}
 	update := bson.D{{Key: "$set", Value: updateToken}}
 	_, err = userCollection.UpdateOne(ctx, filter, update, opt)
 	if err != nil {
-		log.Println(err.Error())
-		return
+		return fmt.Errorf("unable to update the user token's")
 	}
-	return
+	return nil
 }
 
 func ValidadeToken(signedToken string) (claims *entity.SignedDetails, msg string) {

@@ -27,12 +27,8 @@ func Login(email, password *string) (entity.User, error) {
 		return entity.User{}, fmt.Errorf("user not found")
 	}
 
-	token, refreshToken, err := GenerateAllTokens(user)
-	if err != nil {
-		return entity.User{}, fmt.Errorf("unable to generate the user token's")
-	}
-	if err := UpdateAllTOkens(token, refreshToken, user.UID); err != nil {
-		return entity.User{}, fmt.Errorf("unable to update the user token")
+	if err := UpdateAllTOkens(user); err != nil {
+		return entity.User{}, err
 	}
 	err = userCollection.FindOne(queryCtx, bson.M{"uid": user.UID}).Decode(&user)
 	if err != nil {

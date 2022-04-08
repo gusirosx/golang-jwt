@@ -95,23 +95,4 @@ func validatePhone(phone string) error {
 // 	return nil
 // }
 
-// func validateProviderUserInfo(p *UserProvider) error {
-// 	if p.UID == "" {
-// 		return fmt.Errorf("user provider must specify a uid")
-// 	}
-// 	if p.ProviderID == "" {
-// 		return fmt.Errorf("user provider must specify a provider ID")
-// 	}
-// 	return nil
-// }
-
-// func validateProvider(providerID string, providerUID string) error {
-// 	if providerID == "" {
-// 		return fmt.Errorf("providerID must be a non-empty string")
-// 	} else if providerUID == "" {
-// 		return fmt.Errorf("providerUID must be a non-empty string")
-// 	}
-// 	return nil
-// }
-
 // // End of validators

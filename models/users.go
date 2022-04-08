@@ -120,9 +120,9 @@ func UpdateUser(id string, user entity.User) error {
 		return fmt.Errorf("unable to update user")
 	}
 
-	if err := UpdateAllTOkens(*recU.Token, *recU.RefreshToken, recU.UID); err != nil {
-		return fmt.Errorf("unable to update the user token")
-	}
+	// if err := UpdateAllTOkens(*recU.Token, *recU.RefreshToken, recU.UID); err != nil {
+	// 	return fmt.Errorf("unable to update the user token")
+	// }
 	return nil
 }
 
@@ -189,8 +189,3 @@ func GetUser(UID string) (user entity.User, err error) {
 
 	return
 }
-
-// CreateClaims
-// ReadClaims
-// UpdateClaims
-// DeleteClaims
