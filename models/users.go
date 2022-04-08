@@ -148,38 +148,6 @@ func DeleteUser(id string) error {
 	return nil
 }
 
-func Login(email, password *string) (entity.User, error) {
-
-	var user entity.User // Found User
-	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
-
-	err := userCollection.FindOne(queryCtx, bson.M{"email": email}).Decode(&user)
-	if err != nil {
-		return entity.User{}, fmt.Errorf("email is incorrect")
-	}
-	passwordIsValid, err := VerifyPassword(*password, *user.Password)
-	if !passwordIsValid {
-		return entity.User{}, err
-	}
-	if user.Email == nil {
-		return entity.User{}, fmt.Errorf("user not found")
-	}
-
-	token, refreshToken, err := GenerateAllTokens(user)
-	if err != nil {
-		return entity.User{}, fmt.Errorf("unable to generate the user token's")
-	}
-	if err := UpdateAllTOkens(token, refreshToken, user.UID); err != nil {
-		return entity.User{}, fmt.Errorf("unable to update the user token")
-	}
-	err = userCollection.FindOne(queryCtx, bson.M{"uid": user.UID}).Decode(&user)
-	if err != nil {
-		return entity.User{}, err
-	}
-	return user, nil
-}
-
 func GetUsers(ctx *gin.Context) (response *mongo.Cursor, err error) {
 	recordPerPage, err := strconv.Atoi(ctx.Query("recordPerPage"))
 	if err != nil || recordPerPage < 1 {

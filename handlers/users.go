@@ -37,7 +37,7 @@ func Signup(ctx *gin.Context) {
 func UpdateUser(ctx *gin.Context) {
 	var user entity.User
 
-	userID := ctx.Param("uid")
+	userID := ctx.Param("user_id")
 	if userID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "no user ID was provided"})
 		return
@@ -74,20 +74,6 @@ func DeleteUser(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"success": "User was successfully deleted"})
-}
-
-func Login(ctx *gin.Context) {
-	var user entity.User
-	if err := ctx.BindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	foundUser, err := models.Login(user.Email, user.Password)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, foundUser)
 }
 
 func GetUsers(ctx *gin.Context) {
