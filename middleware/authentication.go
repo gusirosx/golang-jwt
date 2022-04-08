@@ -21,10 +21,10 @@ func Authenticate() gin.HandlerFunc {
 			return
 		}
 		ctx.Set("email", claims.Email)
-		ctx.Set("first_name", claims.FirstName)
-		ctx.Set("last_name", claims.LastName)
+		ctx.Set("firstName", claims.FirstName)
+		ctx.Set("lastName", claims.LastName)
 		ctx.Set("uid", claims.UID)
-		ctx.Set("user_type", claims.UserType)
+		ctx.Set("userType", claims.UserType)
 		ctx.Next()
 	}
 }

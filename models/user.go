@@ -39,26 +39,28 @@ func CreateUser(user entity.User) error {
 	} else if count > 0 {
 		return fmt.Errorf("this phone has already been registered")
 	}
-
 	password := HashPassword(*user.Password)
 	time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
 	id := primitive.NewObjectID()
-	newuser := entity.User{
-		ID:            id,
-		First_name:    user.First_name,
-		Last_name:     user.Last_name,
-		Password:      &password,
-		Email:         user.Email,
-		Phone:         user.Phone,
-		Token:         &token,
-		Refresh_token: &refreshToken,
-		User_type:     user.User_type,
-		Created_at:    time,
-		Updated_at:    time,
-		User_id:       id.Hex(),
-	}
+	user.UID = id.Hex()
+	token, refreshToken, _ := GenerateAllTokens(user)
 
+	newuser := entity.User{
+		ID:           id,
+		UserName:     user.UserName,
+		FirstName:    user.FirstName,
+		LastName:     user.LastName,
+		Password:     &password,
+		Email:        user.Email,
+		Phone:        user.Phone,
+		UserType:     user.UserType,
+		Picture:      user.Picture,
+		Token:        &token,
+		RefreshToken: &refreshToken,
+		Created:      time,
+		Updated:      time,
+		UID:          user.UID,
+	}
 	_, err = userCollection.InsertOne(ctx, newuser)
 	if err != nil {
 		log.Println(err.Error())
@@ -102,13 +104,14 @@ func UpdateUser(id string, user entity.User) error {
 	time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
 	updatedUser = append(updatedUser,
-		bson.E{Key: "first_name", Value: user.First_name},
-		bson.E{Key: "last_name", Value: user.Last_name},
+		bson.E{Key: "userName", Value: user.UserName},
+		bson.E{Key: "firstName", Value: user.FirstName},
+		bson.E{Key: "lastName", Value: user.LastName},
 		bson.E{Key: "password", Value: &password},
 		bson.E{Key: "email", Value: user.Email},
 		bson.E{Key: "phone", Value: user.Phone},
-		bson.E{Key: "user_type", Value: user.User_type},
-		bson.E{Key: "updated_at", Value: time})
+		bson.E{Key: "userType", Value: user.UserType},
+		bson.E{Key: "updated", Value: time})
 	opt := options.Update().SetUpsert(true)
 	update := bson.D{{Key: "$set", Value: updatedUser}}
 	_, err = userCollection.UpdateByID(ctx, idPrimitive, update, opt)
@@ -117,10 +120,9 @@ func UpdateUser(id string, user entity.User) error {
 		return fmt.Errorf("unable to update user")
 	}
 
-	if err := UpdateAllTOkens(*recU.Token, *recU.Refresh_token, recU.User_id); err != nil {
+	if err := UpdateAllTOkens(*recU.Token, *recU.RefreshToken, recU.UID); err != nil {
 		return fmt.Errorf("unable to update the user token")
 	}
-
 	return nil
 }
 
@@ -164,15 +166,14 @@ func Login(email, password *string) (entity.User, error) {
 		return entity.User{}, fmt.Errorf("user not found")
 	}
 
-	token, refreshToken, err := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+	token, refreshToken, err := GenerateAllTokens(user)
 	if err != nil {
 		return entity.User{}, fmt.Errorf("unable to generate the user token's")
 	}
-	log.Println(token)
-	if err := UpdateAllTOkens(token, refreshToken, user.User_id); err != nil {
+	if err := UpdateAllTOkens(token, refreshToken, user.UID); err != nil {
 		return entity.User{}, fmt.Errorf("unable to update the user token")
 	}
-	err = userCollection.FindOne(queryCtx, bson.M{"user_id": user.User_id}).Decode(&user)
+	err = userCollection.FindOne(queryCtx, bson.M{"uid": user.UID}).Decode(&user)
 	if err != nil {
 		return entity.User{}, err
 	}
@@ -209,11 +210,15 @@ func GetUsers(ctx *gin.Context) (response *mongo.Cursor, err error) {
 }
 
 func GetUser(UID string) (user entity.User, err error) {
+	log.Println(UID)
 	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
-	if err = userCollection.FindOne(queryCtx, bson.M{"user_id": UID}).Decode(&user); err != nil {
+	if err = userCollection.FindOne(queryCtx, bson.M{"uid": UID}).Decode(&user); err != nil {
 		return
 	}
+
+	log.Println(user.UID)
+
 	return
 }
 

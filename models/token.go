@@ -13,50 +13,48 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type SignedDetails2 struct {
-	Email      string
-	First_name string
-	Last_name  string
-	Uid        string
-	User_type  string
-	jwt.StandardClaims
-}
-
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
 //var SecretKey []byte = []byte(os.Getenv("JWT_SECRET_KEY"))
 
-func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signedToken string, signedRefreshToken string, err error) {
+//func GenerateAllTokens(email, firstName, lastName, userType, uid string) (signedToken string, signedRefreshToken string, err error) {
+
+func GenerateAllTokens(user entity.User) (string, string, error) {
 	claims := &entity.SignedDetails{
-		UID:       uid,
-		UserName:  "",
-		FirstName: firstName,
-		LastName:  lastName,
-		Email:     email,
-		Phone:     "",
-		UserType:  userType,
-		Picture:   "",
+		UID:       user.UID,
+		UserName:  *user.UserName,
+		FirstName: *user.FirstName,
+		LastName:  *user.LastName,
+		Email:     *user.Email,
+		Phone:     *user.Phone,
+		UserType:  *user.UserType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
 	}
-
 	refreshClaims := &entity.SignedDetails{
+		UID:       user.UID,
+		UserName:  *user.UserName,
+		FirstName: *user.FirstName,
+		LastName:  *user.LastName,
+		Email:     *user.Email,
+		Phone:     *user.Phone,
+		UserType:  *user.UserType,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * 1).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(365)).Unix(),
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Println(err.Error())
-		return
+		return "", "", err
 	}
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Println(err.Error())
-		return
+		return "", "", err
 	}
-	return token, refreshToken, err
+	return token, refreshToken, nil
 }
 
 func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error) {
@@ -67,10 +65,10 @@ func UpdateAllTOkens(signedToken, signedRefreshToken, userId string) (err error)
 	UpdatedAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateToken = append(updateToken,
 		bson.E{Key: "token", Value: signedToken},
-		bson.E{Key: "refresh_token", Value: signedRefreshToken},
-		bson.E{Key: "updated_at", Value: UpdatedAt})
+		bson.E{Key: "refreshToken", Value: signedRefreshToken},
+		bson.E{Key: "updated", Value: UpdatedAt})
 	opt := options.Update().SetUpsert(true)
-	filter := bson.M{"user_id": userId}
+	filter := bson.M{"uid": userId}
 	update := bson.D{{Key: "$set", Value: updateToken}}
 	_, err = userCollection.UpdateOne(ctx, filter, update, opt)
 	if err != nil {

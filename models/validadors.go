@@ -60,48 +60,6 @@ func validatePhone(phone string) error {
 	return nil
 }
 
-// strings.Compare()
-// status, err := regexp.MatchString(k, strings.ToUpper(SensorName.String))
-// if err != nil {
-// 	log.Println(err.Error())
-// }
-
-//userCollection.DeleteOne()
-
-// count, err := userCollection.CountDocuments(queryCtx, bson.M{"email": user.Email})
-// if err != nil {
-// 	log.Println(err.Error())
-// 	return fmt.Errorf("error occured while checking for the email")
-// } else if count > 0 {
-// 	return fmt.Errorf("this email has already been registered")
-// }
-// count, err = userCollection.CountDocuments(queryCtx, bson.M{"phone": user.Phone})
-// if err != nil {
-// 	log.Println(err.Error())
-// 	return fmt.Errorf("error occured while checking for the phone")
-// } else if count > 0 {
-// 	return fmt.Errorf("this phone has already been registered")
-// }
-
-// password := HashPassword(*user.Password)
-// time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-// token, refreshToken, _ := GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
-// id := primitive.NewObjectID()
-// newuser := entity.User{
-// 	ID:            id,
-// 	First_name:    user.First_name,
-// 	Last_name:     user.Last_name,
-// 	Password:      &password,
-// 	Email:         user.Email,
-// 	Phone:         user.Phone,
-// 	Token:         &token,
-// 	Refresh_token: &refreshToken,
-// 	User_type:     user.User_type,
-// 	Created_at:    time,
-// 	Updated_at:    time,
-// 	User_id:       id.Hex(),
-// }
-
 // verificar se a chave secreta está sendo utilizada em algum lugar
 
 // // Validators.
@@ -157,54 +115,3 @@ func validatePhone(phone string) error {
 // }
 
 // // End of validators
-
-// userID, _ := ctx.Get("UID")
-// entry := new(logEntry.LoggingEntry)
-// payload := entity.Payload{Name: "GetUser", UID: userID.(string)}
-// values := ctx.Request.URL.Query()
-// var user *auth.UserRecord
-// var err error
-// if _, ok := values["email"]; ok {
-// 	user, err = models.GetUserByEmail(ctx, values["email"][0])
-
-// } else if _, ok := values["phoneNumber"]; ok {
-// 	user, err = models.GetUserByPhone(ctx, "+"+values["phoneNumber"][0])
-
-// } else {
-// 	err = fmt.Errorf("invalid search parameters")
-// 	payload.Message = err.Error()
-// 	service.Logger.Log(entry.New(payload, ctx, logging.Error, http.StatusBadRequest))
-// 	ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 	fmt.Println(err.Error())
-// 	return
-// }
-
-// var user entity.User
-// // Call BindJSON to bind the received JSON to user
-// err := ctx.BindJSON(&user)
-// if err != nil {
-// 	err := fmt.Errorf("delete user: %v", err)
-// 	payload.Message = err.Error()
-// 	service.Logger.Log(entry.New(payload, ctx, logging.Error, http.StatusBadRequest))
-// 	ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 	fmt.Println(err.Error())
-// 	return
-// }
-// err = service.Client.DeleteUser(ctx, user.Uid)
-// if err != nil {
-// 	err := fmt.Errorf("delete user: %v", err)
-// 	payload.Message = err.Error()
-// 	service.Logger.Log(entry.New(payload, ctx, logging.Error, http.StatusInternalServerError))
-// 	ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-// 		"error":  err.Error(),
-// 		"detail": map[string]interface{}{"userID": user.Uid},
-// 	})
-// 	fmt.Println(err.Error())
-// 	return
-// } else {
-// 	fmt.Printf("User successfully deleted: %v\n", user.Uid)
-// 	ctx.JSON(http.StatusCreated, gin.H{
-// 		"success": "User successfully deleted",
-// 		"detail":  map[string]interface{}{"userID": user.Uid},
-// 	})
-// 	payload.Message = "success"

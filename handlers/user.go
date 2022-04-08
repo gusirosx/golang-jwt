@@ -37,7 +37,7 @@ func Signup(ctx *gin.Context) {
 func UpdateUser(ctx *gin.Context) {
 	var user entity.User
 
-	userID := ctx.Param("user_id")
+	userID := ctx.Param("uid")
 	if userID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "no user ID was provided"})
 		return

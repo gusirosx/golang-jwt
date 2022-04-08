@@ -8,29 +8,30 @@ import (
 )
 
 type User struct {
-	ID            primitive.ObjectID `bson:"_id"`
-	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
-	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
-	Password      *string            `json:"Password" validate:"required,min=6"`
-	Email         *string            `json:"email" validate:"email,required"`
-	Phone         *string            `json:"phone" validate:"required"`
-	Token         *string            `json:"token"`
-	User_type     *string            `json:"user_type" validate:"required,eq=ADMIN|eq=USER"`
-	Refresh_token *string            `json:"refresh_token"`
-	Created_at    time.Time          `json:"created_at"`
-	Updated_at    time.Time          `json:"updated_at"`
-	User_id       string             `json:"user_id"`
+	ID           primitive.ObjectID `bson:"_id"`
+	UserName     *string            `json:"userName" validate:"required,min=6,max=20"`
+	FirstName    *string            `json:"firstName" validate:"required,min=2,max=100"`
+	LastName     *string            `json:"lastName" validate:"required,min=2,max=100"`
+	Password     *string            `json:"password" validate:"required,min=6"`
+	Email        *string            `json:"email" validate:"email,required"`
+	Phone        *string            `json:"phone" validate:"required"`
+	UserType     *string            `json:"userType" validate:"required,eq=ADMIN|eq=USER"`
+	Picture      *string            `json:"picture"`
+	Token        *string            `json:"token"`
+	RefreshToken *string            `json:"refreshToken"`
+	Created      time.Time          `json:"created"`
+	Updated      time.Time          `json:"updated"`
+	UID          string             `json:"uid"`
 }
 
 type SignedDetails struct {
-	UID       string `json:"user_id"`
-	UserName  string `json:"username"`
+	UID       string `json:"uid"`
+	UserName  string `json:"userName"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
 	Phone     string `json:"phone"`
-	UserType  string `json:"role"`
-	Picture   string `json:"picture"`
+	UserType  string `json:"userType"`
 	jwt.StandardClaims
 }
 
