@@ -81,19 +81,19 @@ func UpdateUser(id string, user entity.User) error {
 		return err
 	}
 
-	recU, err := GetUser(id)
+	recoveredUser, err := GetUser(id)
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("error during user recovering")
 	}
 	// e-mail check
-	if !strings.EqualFold(*user.Email, *recU.Email) {
+	if !strings.EqualFold(*user.Email, *recoveredUser.Email) {
 		if err := emailVerify(ctx, *user.Email); err != nil {
 			return err
 		}
 	}
 	// phone check
-	if !strings.EqualFold(*user.Phone, *recU.Phone) {
+	if !strings.EqualFold(*user.Phone, *recoveredUser.Phone) {
 		if err := phoneVerify(ctx, *user.Phone); err != nil {
 			return err
 		}
@@ -103,6 +103,12 @@ func UpdateUser(id string, user entity.User) error {
 	password := HashPassword(*user.Password)
 	time, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
+	// Update user info with the new token's
+	token, refreshToken, err := GenerateAllTokens(user)
+	if err != nil {
+		return fmt.Errorf("unable to generate the user token's")
+	}
+
 	updatedUser = append(updatedUser,
 		bson.E{Key: "userName", Value: user.UserName},
 		bson.E{Key: "firstName", Value: user.FirstName},
@@ -111,6 +117,8 @@ func UpdateUser(id string, user entity.User) error {
 		bson.E{Key: "email", Value: user.Email},
 		bson.E{Key: "phone", Value: user.Phone},
 		bson.E{Key: "userType", Value: user.UserType},
+		bson.E{Key: "token", Value: token},
+		bson.E{Key: "refreshtoken", Value: refreshToken},
 		bson.E{Key: "updated", Value: time})
 	opt := options.Update().SetUpsert(true)
 	update := bson.D{{Key: "$set", Value: updatedUser}}
@@ -120,9 +128,13 @@ func UpdateUser(id string, user entity.User) error {
 		return fmt.Errorf("unable to update user")
 	}
 
-	// if err := UpdateAllTOkens(*recU.Token, *recU.RefreshToken, recU.UID); err != nil {
-	// 	return fmt.Errorf("unable to update the user token")
+	// filter := bson.M{"uid": user.UID}
+	// update := bson.D{{Key: "$set", Value: updateToken}}
+	// _, err = userCollection.UpdateOne(ctx, filter, update, opt)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to update the user token's")
 	// }
+
 	return nil
 }
 
