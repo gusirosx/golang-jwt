@@ -15,7 +15,7 @@ func Login(email, password *string) (entity.User, error) {
 	var queryCtx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	err := userCollection.FindOne(queryCtx, bson.M{"email": email}).Decode(&user)
+	err := collection.FindOne(queryCtx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return entity.User{}, fmt.Errorf("email is incorrect")
 	}
@@ -30,7 +30,7 @@ func Login(email, password *string) (entity.User, error) {
 	if err := UpdateAllTOkens(user); err != nil {
 		return entity.User{}, err
 	}
-	err = userCollection.FindOne(queryCtx, bson.M{"uid": user.UID}).Decode(&user)
+	err = collection.FindOne(queryCtx, bson.M{"uid": user.UID}).Decode(&user)
 	if err != nil {
 		return entity.User{}, err
 	}

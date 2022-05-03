@@ -67,7 +67,7 @@ func UpdateAllTOkens(user entity.User) error {
 	opt := options.Update().SetUpsert(true)
 	filter := bson.M{"uid": user.UID}
 	update := bson.D{{Key: "$set", Value: updateToken}}
-	_, err = userCollection.UpdateOne(ctx, filter, update, opt)
+	_, err = collection.UpdateOne(ctx, filter, update, opt)
 	if err != nil {
 		return fmt.Errorf("unable to update the user token's")
 	}

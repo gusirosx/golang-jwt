@@ -13,7 +13,7 @@ import (
 // Checks if the email is already registered in the database
 func emailVerify(ctx context.Context, email string) error {
 
-	count, err := userCollection.CountDocuments(ctx, bson.M{"email": email})
+	count, err := collection.CountDocuments(ctx, bson.M{"email": email})
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("error occured while checking for the email")
@@ -28,7 +28,7 @@ func emailVerify(ctx context.Context, email string) error {
 // Checks if the phone is already registered in the database
 func phoneVerify(ctx context.Context, phone string) error {
 
-	count, err := userCollection.CountDocuments(ctx, bson.M{"phone": phone})
+	count, err := collection.CountDocuments(ctx, bson.M{"phone": phone})
 	if err != nil {
 		log.Println(err.Error())
 		return fmt.Errorf("error occured while checking for the phone")

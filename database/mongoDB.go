@@ -4,34 +4,24 @@ import (
 	"context"
 	"log"
 	"os"
-	"time"
 
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var Client *mongo.Client = DBinstance()
+var MongoDb = os.Getenv("MONGODB")
 
-func DBinstance() *mongo.Client {
-	if err := godotenv.Load(".env"); err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	MongoDb := os.Getenv("MONGODB_URL")
-	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDb))
+func MongoInstance() *mongo.Client {
+	// Create a new client and connect to the server
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(MongoDb))
 	if err != nil {
-		log.Fatal(err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := client.Connect(ctx); err != nil {
-		log.Fatalln(err.Error())
+		log.Fatalln("Unable to establish connection:", err.Error())
 	}
 	log.Println("Connected to MongoDB!")
 	return client
 }
 
 func OpenCollection(client *mongo.Client, name string) *mongo.Collection {
-	var collection *mongo.Collection = client.Database("UsersMongo").Collection(name)
+	var collection *mongo.Collection = client.Database("usersDB").Collection(name)
 	return collection
 }
