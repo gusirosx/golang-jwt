@@ -10,7 +10,7 @@ import (
 )
 
 func CheckUserType(ctx *gin.Context, role string) (err error) {
-	userType := ctx.GetString("user_type")
+	userType := ctx.GetString("userType")
 	err = nil
 	if userType != role {
 		err = errors.New("unauthorized to access this resource")
@@ -20,7 +20,7 @@ func CheckUserType(ctx *gin.Context, role string) (err error) {
 }
 
 func MatchUserTypeToUid(ctx *gin.Context, userId string) (err error) {
-	userType := ctx.GetString("user_type")
+	userType := ctx.GetString("userType")
 	uid := ctx.GetString("uid")
 	err = nil
 	if userType == "USER" && uid != userId {
@@ -47,11 +47,3 @@ func VerifyPassword(userPass, providedPass string) (bool, error) {
 	}
 	return true, nil
 }
-
-// func VerifyPassword(userPass, providedPass string) (bool, string) {
-// 	err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(userPass))
-// 	if err != nil {
-// 		return false, "user password is incorrect"
-// 	}
-// 	return true, ""
-// }

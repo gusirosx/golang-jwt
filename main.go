@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	// Setup Gin-Gonic
+	// Setup GinGonic Routes
 	routes.RoutesSetup()
 }

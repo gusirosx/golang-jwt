@@ -55,8 +55,12 @@ func AuthRoutes(routes *gin.RouterGroup) {
 
 func UserRoutes(routes *gin.RouterGroup) {
 	routes.Use(middleware.Authenticate())
-	// Handle GET users requests at /users
+	// Read users at /users
 	routes.GET("", handlers.GetUsers)
-	// Handle GET user requests at /users/ID
+	// Update users at /users
+	routes.PUT("/:user_id", handlers.UpdateUser)
+	// Delete users at /users
+	routes.DELETE("/:user_id", handlers.DeleteUser)
+	// Read users at /users/ID
 	routes.GET("/:user_id", handlers.GetUser)
 }
