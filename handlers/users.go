@@ -82,6 +82,7 @@ func GetUsers(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// call GetUsers to get all users response
 	response, err := models.GetUsers(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
